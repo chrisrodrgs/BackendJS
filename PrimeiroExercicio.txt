@@ -1,0 +1,2 @@
+Este arquivo foi criando para o primeiro exercicio do curso.
+Esta segunda linha é para apagar.
