@@ -823,12 +823,12 @@
                 <ul>
                     <li><a href="#home">Início</a></li>
                     <li><a href="#services">Serviços</a></li>
-                    <li><a href="#user-area">Área do Cliente</a></li>
+                    <li><a href="area_cliente.php">Área do Cliente</a></li>
                     <li><a href="#contact">Contato</a></li>
                 </ul>
             </nav>
             <div class="user-actions">
-                <button class="btn btn-outline" id="loginBtn">
+                <button class="btn btn-outline" id="loginBtn" onclick="window.location.href='login.php'">
                     <i class="fas fa-sign-in-alt"></i> Entrar
                 </button>
                 <a href="cadastro.html" class="btn btn-primary" id="registerBtn">
@@ -903,61 +903,6 @@
                         <a href="direitotrabalhista.html" class="service-link">
                             Saiba mais <i class="fas fa-arrow-right"></i>
                         </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Área do Usuário -->
-    <section class="user-area" id="user-area">
-        <div class="container">
-            <div class="section-title">
-                <h2>Área do Cliente</h2>
-                <p>Acesse seus processos, documentos e converse com nosso time jurídico.</p>
-            </div>
-            <div class="user-container">
-                <div class="user-sidebar fade-in">
-                    <div class="user-profile">
-                        <div class="user-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="user-info">
-                            <h3>Carlos Silva</h3>
-                            <p>Cliente desde 2021</p>
-                        </div>
-                    </div>
-                    <ul class="user-menu">
-                        <li><a href="#" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
-                        <li><a href="#"><i class="fas fa-file-contract"></i> Meus Processos</a></li>
-                        <li><a href="#"><i class="fas fa-file-pdf"></i> Documentos</a></li>
-                        <li><a href="#"><i class="fas fa-comments"></i> Chat com Advogado</a></li>
-                        <li><a href="#"><i class="fas fa-calendar-alt"></i> Agendamentos</a></li>
-                        <li><a href="#"><i class="fas fa-cog"></i> Configurações</a></li>
-                    </ul>
-                </div>
-                <div class="user-content fade-in">
-                    <h3>Chat com Advogado</h3>
-                    <div class="chat-container">
-                        <div class="chat-header">
-                            <i class="fas fa-user-tie"></i>
-                            <h4>Dr. Roberto Felix - OAB/SP 123.456</h4>
-                        </div>
-                        <div class="chat-messages" id="chatMessages">
-                            <div class="message received">
-                                <p>Olá, Carlos! Como posso ajudá-lo hoje?</p>
-                            </div>
-                            <div class="message sent">
-                                <p>Bom dia, Dr. Roberto. Gostaria de saber como está andando o processo do inventário.</p>
-                            </div>
-                            <div class="message received">
-                                <p>O processo está na fase de juntada de documentos. Precisamos da certidão de óbito atualizada.</p>
-                            </div>
-                        </div>
-                        <div class="chat-input">
-                            <input type="text" id="messageInput" placeholder="Digite sua mensagem...">
-                            <button id="sendMessage"><i class="fas fa-paper-plane"></i></button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1062,56 +1007,7 @@
     </footer>
 
     <script>
-        // Função para simular o chat
-        document.getElementById('sendMessage').addEventListener('click', function() {
-            const messageInput = document.getElementById('messageInput');
-            const message = messageInput.value.trim();
-            
-            if (message) {
-                const chatMessages = document.getElementById('chatMessages');
-                
-                // Adiciona a mensagem do usuário
-                const userMessage = document.createElement('div');
-                userMessage.className = 'message sent';
-                userMessage.innerHTML = `<p>${message}</p>`;
-                chatMessages.appendChild(userMessage);
-                
-                // Limpa o campo de entrada
-                messageInput.value = '';
-                
-                // Simula resposta do advogado após um breve delay
-                setTimeout(function() {
-                    const responses = [
-                        "Entendi sua dúvida. Vou verificar e retorno em breve.",
-                        "Preciso de mais informações para poder ajudá-lo melhor.",
-                        "Isso está relacionado ao processo em andamento. Vou consultar o status.",
-                        "Podemos marcar uma reunião para discutir esse assunto com mais detalhes?",
-                        "Já encaminhei sua solicitação para nossa equipe técnica."
-                    ];
-                    
-                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                    
-                    const lawyerMessage = document.createElement('div');
-                    lawyerMessage.className = 'message received';
-                    lawyerMessage.innerHTML = `<p>${randomResponse}</p>`;
-                    chatMessages.appendChild(lawyerMessage);
-                    
-                    // Rolagem automática para a última mensagem
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }, 1000);
-                
-                // Rolagem automática para a última mensagem
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        });
-
-        // Permite enviar mensagem pressionando Enter
-        document.getElementById('messageInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('sendMessage').click();
-            }
-        });
-
+        
         // Simulação de login/cadastro
         document.getElementById('loginBtn').addEventListener('click', function() {
             alert('Funcionalidade de login será implementada em breve!');

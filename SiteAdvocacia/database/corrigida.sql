@@ -1,0 +1,17 @@
+CREATE DATABASE IF NOT EXISTS felix_advocacia;
+USE felix_advocacia;
+
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fullName VARCHAR(255) NOT NULL,
+    birthDate DATE NOT NULL,
+    cpf VARCHAR(14) UNIQUE NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    secondaryPhone VARCHAR(20),
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    howFound VARCHAR(50),
+    newsletter TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
