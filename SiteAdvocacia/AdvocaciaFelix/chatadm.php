@@ -118,6 +118,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $erro = "Erro ao excluir agendamento: " . mysqli_error($conn);
             }
         }
+        // Processar envio de mensagem do chat
+        elseif ($acao == 'enviar_mensagem') {
+            $conversa_id = intval($_POST['conversa_id']);
+            $mensagem_texto = mysqli_real_escape_string($conn, $_POST['mensagem']);
+            $remetente = 'advogado'; // O advogado está enviando
+            
+            $sql = "INSERT INTO mensagens (conversa_id, remetente, mensagem, lida, created_at) 
+                    VALUES ($conversa_id, '$remetente', '$mensagem_texto', 0, NOW())";
+            
+            if (mysqli_query($conn, $sql)) {
+                // Mensagem enviada com sucesso
+                echo json_encode(['success' => true]);
+                exit;
+            } else {
+                echo json_encode(['success' => false, 'error' => mysqli_error($conn)]);
+                exit;
+            }
+        }
     }
 }
 
@@ -131,6 +149,46 @@ $result_agendamentos = mysqli_query($conn, $sql_agendamentos);
 $agendamentos = [];
 if ($result_agendamentos) {
     $agendamentos = mysqli_fetch_all($result_agendamentos, MYSQLI_ASSOC);
+}
+
+// Buscar conversas para o chat
+$sql_conversas = "SELECT DISTINCT c.Id as cliente_id, c.FullName, c.phone, c.email,
+                 (SELECT COUNT(*) FROM mensagens m WHERE m.conversa_id = c.Id AND m.remetente = 'cliente' AND m.lida = 0) as mensagens_nao_lidas,
+                 (SELECT mensagem FROM mensagens WHERE conversa_id = c.Id ORDER BY created_at DESC LIMIT 1) as ultima_mensagem,
+                 (SELECT created_at FROM mensagens WHERE conversa_id = c.Id ORDER BY created_at DESC LIMIT 1) as ultima_mensagem_data
+                 FROM Clientes c
+                 LEFT JOIN mensagens m ON c.Id = m.conversa_id
+                 WHERE m.id IS NOT NULL
+                 ORDER BY ultima_mensagem_data DESC";
+$result_conversas = mysqli_query($conn, $sql_conversas);
+$conversas = [];
+if ($result_conversas) {
+    $conversas = mysqli_fetch_all($result_conversas, MYSQLI_ASSOC);
+}
+
+// Se uma conversa específica foi selecionada, buscar suas mensagens
+$conversa_selecionada = null;
+$mensagens_conversa = [];
+if (isset($_GET['conversa_id'])) {
+    $conversa_id = intval($_GET['conversa_id']);
+    
+    // Buscar informações do cliente
+    $sql_cliente = "SELECT Id, FullName, phone, email FROM Clientes WHERE Id = $conversa_id";
+    $result_cliente = mysqli_query($conn, $sql_cliente);
+    if ($result_cliente && mysqli_num_rows($result_cliente) > 0) {
+        $conversa_selecionada = mysqli_fetch_assoc($result_cliente);
+        
+        // Buscar mensagens da conversa
+        $sql_mensagens = "SELECT * FROM mensagens WHERE conversa_id = $conversa_id ORDER BY created_at ASC";
+        $result_mensagens = mysqli_query($conn, $sql_mensagens);
+        if ($result_mensagens) {
+            $mensagens_conversa = mysqli_fetch_all($result_mensagens, MYSQLI_ASSOC);
+            
+            // Marcar mensagens do cliente como lidas
+            $sql_update_lidas = "UPDATE mensagens SET lida = 1 WHERE conversa_id = $conversa_id AND remetente = 'cliente' AND lida = 0";
+            mysqli_query($conn, $sql_update_lidas);
+        }
+    }
 }
 ?>
 
@@ -227,11 +285,12 @@ if ($result_agendamentos) {
         }
 
         /* Agenda Section */
-        .agenda-section {
+        .agenda-section, .chat-section {
             background: white;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
 
         .section-title {
@@ -523,10 +582,253 @@ if ($result_agendamentos) {
             margin-top: 20px;
         }
 
+        /* Chat Styles - Estilo Felix Advocacia */
+        .chat-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .chat-contatos {
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            overflow-y: auto;
+        }
+
+        .chat-contatos-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .chat-contatos-header h4 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .chat-contato {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .chat-contato:hover {
+            background: #e3f2fd;
+        }
+
+        .chat-contato.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .chat-contato.active .contato-info h4,
+        .chat-contato.active .contato-info p {
+            color: white;
+        }
+
+        .contato-info h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .contato-info p {
+            margin: 0;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .contato-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .badge-mensagens {
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            height: 100%;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .chat-header h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+
+        .chat-header small {
+            opacity: 0.9;
+        }
+
+        .chat-mensagens {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #f8f9fa;
+            min-height: 0;
+        }
+
+        .mensagem {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mensagem.advogado {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .mensagem.cliente {
+            background: white;
+            color: #2c3e50;
+            align-self: flex-start;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .mensagem-hora {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        /* CORREÇÃO DA CAIXA DE CHAT */
+        .chat-input {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            background: white;
+            position: relative;
+            z-index: 10;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .chat-input-field {
+            display: block !important;
+            width: 100% !important;
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            background: white;
+        }
+
+        .chat-input-field:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .btn-enviar {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-enviar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-enviar:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .sem-conversa {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 40px;
+            flex-direction: column;
+        }
+
+        .sem-conversa i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        #form-mensagem {
+            width: 100%;
+            display: flex;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .agenda-content {
                 grid-template-columns: 1fr;
+            }
+            
+            .chat-container {
+                grid-template-columns: 300px 1fr;
             }
         }
 
@@ -551,6 +853,15 @@ if ($result_agendamentos) {
             .agenda-table td {
                 padding: 8px;
             }
+            
+            .chat-container {
+                grid-template-columns: 1fr;
+                height: 400px;
+            }
+            
+            .chat-contatos {
+                max-height: 200px;
+            }
         }
     </style>
 </head>
@@ -567,12 +878,12 @@ if ($result_agendamentos) {
                 <li><a href="#" class="active"><i class="fas fa-calendar-alt"></i> Agenda</a></li>
                 <li><a href="#"><i class="fas fa-users"></i> Clientes</a></li>
                 <li><a href="#"><i class="fas fa-file-contract"></i> Processos</a></li>
+                <li><a href="#"><i class="fas fa-comments"></i> Chat</a></li>
                 <li><a href="#"><i class="fas fa-chart-bar"></i> Relatórios</a></li>
                 <li><a href="#"><i class="fas fa-cog"></i> Configurações</a></li>
                 <li><a href="#" onclick="confirmarLogoutAdvogado()"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
             </ul>
         </div>
-        
 
         <!-- Main Content -->
         <div class="main-content">
@@ -719,6 +1030,96 @@ if ($result_agendamentos) {
                     </div>
                 </div>
             </section>
+
+            <!-- Seção Chat -->
+            <section class="chat-section">
+                <h2 class="section-title"><i class="fas fa-comments"></i> Chat com Clientes</h2>
+                
+                <div class="chat-container">
+                    <!-- Lista de contatos/conversas -->
+                    <div class="chat-contatos">
+                        <div class="chat-contatos-header">
+                            <h4><i class="fas fa-users"></i> Conversas com Clientes</h4>
+                        </div>
+                        <?php if (empty($conversas)): ?>
+                            <div class="sem-conversa" style="padding: 20px;">
+                                <div>
+                                    <i class="fas fa-comments"></i>
+                                    <p>Nenhuma conversa iniciada</p>
+                                    <small>As conversas aparecerão aqui quando os clientes enviarem mensagens</small>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <?php foreach ($conversas as $conversa): ?>
+                                <div class="chat-contato <?php echo ($conversa_selecionada && $conversa_selecionada['Id'] == $conversa['cliente_id']) ? 'active' : ''; ?>" 
+                                     onclick="window.location.href='?conversa_id=<?php echo $conversa['cliente_id']; ?>'">
+                                    <div class="contato-info">
+                                        <h4><?php echo htmlspecialchars($conversa['FullName']); ?></h4>
+                                        <p><?php echo htmlspecialchars($conversa['phone']); ?></p>
+                                        <?php if ($conversa['ultima_mensagem']): ?>
+                                            <p style="font-size: 11px; margin-top: 5px;">
+                                                <?php echo strlen($conversa['ultima_mensagem']) > 30 ? substr($conversa['ultima_mensagem'], 0, 30) . '...' : $conversa['ultima_mensagem']; ?>
+                                            </p>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="contato-meta">
+                                        <small>
+                                            <?php if ($conversa['ultima_mensagem_data']): ?>
+                                                <?php echo date('d/m H:i', strtotime($conversa['ultima_mensagem_data'])); ?>
+                                            <?php endif; ?>
+                                        </small>
+                                        <?php if ($conversa['mensagens_nao_lidas'] > 0): ?>
+                                            <span class="badge-mensagens"><?php echo $conversa['mensagens_nao_lidas']; ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Área de mensagens -->
+                    <div class="chat-area">
+                        <?php if ($conversa_selecionada): ?>
+                            <div class="chat-header">
+                                <h4><i class="fas fa-user"></i> <?php echo htmlspecialchars($conversa_selecionada['FullName']); ?></h4>
+                                <small><?php echo htmlspecialchars($conversa_selecionada['phone']); ?> • <?php echo htmlspecialchars($conversa_selecionada['email']); ?></small>
+                            </div>
+                            
+                            <div class="chat-mensagens" id="chat-mensagens">
+                                <?php foreach ($mensagens_conversa as $msg): ?>
+                                    <div class="mensagem <?php echo $msg['remetente']; ?>">
+                                        <div class="mensagem-texto"><?php echo htmlspecialchars($msg['mensagem']); ?></div>
+                                        <div class="mensagem-hora">
+                                            <?php echo date('H:i', strtotime($msg['created_at'])); ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            
+                            <div class="chat-input">
+                                <form id="form-mensagem" method="POST">
+                                    <input type="hidden" name="acao" value="enviar_mensagem">
+                                    <input type="hidden" name="conversa_id" value="<?php echo $conversa_selecionada['Id']; ?>">
+                                    <div class="input-group">
+                                        <input type="text" name="mensagem" class="chat-input-field" placeholder="Digite sua mensagem..." required id="campo-mensagem">
+                                        <button type="submit" class="btn-enviar" id="btn-enviar">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        <?php else: ?>
+                            <div class="sem-conversa">
+                                <div>
+                                    <i class="fas fa-comment-dots"></i>
+                                    <h3>Selecione uma conversa</h3>
+                                    <p>Escolha um cliente na lista ao lado para visualizar e enviar mensagens</p>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 
@@ -741,8 +1142,6 @@ if ($result_agendamentos) {
     <script>
         // Função para editar agendamento (versão simplificada sem AJAX)
         function editarAgendamento(id) {
-            // Em uma implementação real, você usaria AJAX
-            // Aqui vamos usar uma abordagem simplificada
             if (confirm('Deseja editar este agendamento? Será necessário preencher o formulário manualmente.')) {
                 document.getElementById('form-title').innerHTML = '<i class="fas fa-edit"></i> Editar Agendamento';
                 document.getElementById('acao').value = 'editar';
@@ -758,7 +1157,6 @@ if ($result_agendamentos) {
         // Função para excluir agendamento
         function excluirAgendamento(id) {
             if (confirm('Tem certeza que deseja excluir este agendamento?')) {
-                // Criar um formulário dinâmico para exclusão
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.style.display = 'none';
@@ -808,41 +1206,142 @@ if ($result_agendamentos) {
 
         // Configurar data mínima para hoje
         document.getElementById('data_agendamento').min = new Date().toISOString().split('T')[0];
-    </script>
-    <script>
-function confirmarLogoutAdvogado() {
-    if (confirm('Tem certeza que deseja sair da sua conta?')) {
-        fazerLogoutAdvogado();
+
+        // Auto-scroll para baixo no chat
+        function scrollChatParaBaixo() {
+            const chatMensagens = document.getElementById('chat-mensagens');
+            if (chatMensagens) {
+                chatMensagens.scrollTop = chatMensagens.scrollHeight;
             }
         }
 
-function fazerLogoutAdvogado() {
-    // Limpeza completa dos dados do advogado
-    // ADAPTE ESTES NOMES PARA OS QUE VOCÊ USA NO SEU SISTEMA
-    const itensParaRemover = [
-        'token_advogado',
-        'usuario_advogado', 
-        'dados_advogado',
-        'advogado_logado',
-        'sessao_ativa',
-        'token',
-        'user',
-        'login'
-    ];
-    
-    // Limpar localStorage
-    itensParaRemover.forEach(item => {
-        localStorage.removeItem(item);
-        sessionStorage.removeItem(item);
-    });
-    
-    // Limpar todos os cookies (opcional)
-    document.cookie.split(";").forEach(function(c) {
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
-    
-    // Redirecionar para página principal
-    window.location.href = 'index.html';
+        // CORREÇÃO DO REFRESH RÁPIDO
+        let refreshInterval;
+
+        function iniciarAtualizacaoChat() {
+            // Limpar intervalo anterior se existir
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            // Configurar novo intervalo apenas se estiver em uma conversa
+            if (window.location.search.includes('conversa_id')) {
+                refreshInterval = setInterval(function() {
+                    window.location.reload();
+                }, 30000); // 30 segundos em vez de 10
+            }
+        }
+
+        // Iniciar a atualização quando a página carregar
+        window.addEventListener('load', function() {
+            iniciarAtualizacaoChat();
+            scrollChatParaBaixo();
+            
+            // Focar no campo de mensagem quando uma conversa é selecionada
+            const campoMensagem = document.getElementById('campo-mensagem');
+            if (campoMensagem) {
+                campoMensagem.focus();
+            }
+        });
+
+        // Parar a atualização quando o usuário estiver digitando
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatInput = document.querySelector('.chat-input-field');
+            if (chatInput) {
+                chatInput.addEventListener('focus', function() {
+                    if (refreshInterval) {
+                        clearInterval(refreshInterval);
+                    }
+                });
+                
+                chatInput.addEventListener('blur', function() {
+                    iniciarAtualizacaoChat();
+                });
+                
+                chatInput.addEventListener('input', function() {
+                    // Reiniciar o timer quando o usuário digitar
+                    if (refreshInterval) {
+                        clearInterval(refreshInterval);
+                    }
+                    // Aguardar 5 segundos após parar de digitar para recomeçar as atualizações
+                    setTimeout(iniciarAtualizacaoChat, 5000);
+                });
+            }
+        });
+
+        // Envio de mensagem via AJAX
+        document.getElementById('form-mensagem')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const mensagemInput = this.querySelector('input[name="mensagem"]');
+            const btnEnviar = this.querySelector('.btn-enviar');
+            const mensagemTexto = mensagemInput.value.trim();
+            
+            if (mensagemTexto === '') return;
+            
+            // Desabilitar botão durante o envio
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recarregar a página para mostrar a nova mensagem
+                    window.location.reload();
+                } else {
+                    alert('Erro ao enviar mensagem: ' + data.error);
+                    // Reabilitar botão
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao enviar mensagem');
+                // Reabilitar botão
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            });
+        });
+    </script>
+    <script>
+        function confirmarLogoutAdvogado() {
+            if (confirm('Tem certeza que deseja sair da sua conta?')) {
+                fazerLogoutAdvogado();
+            }
+        }
+
+        function fazerLogoutAdvogado() {
+            // Limpeza completa dos dados do advogado
+            const itensParaRemover = [
+                'token_advogado',
+                'usuario_advogado', 
+                'dados_advogado',
+                'advogado_logado',
+                'sessao_ativa',
+                'token',
+                'user',
+                'login'
+            ];
+            
+            // Limpar localStorage
+            itensParaRemover.forEach(item => {
+                localStorage.removeItem(item);
+                sessionStorage.removeItem(item);
+            });
+            
+            // Limpar todos os cookies (opcional)
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            // Redirecionar para página principal
+            window.location.href = 'index.html';
         }
     </script>
 </body>
