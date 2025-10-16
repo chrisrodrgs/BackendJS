@@ -27,4 +27,10 @@ console.log(frase3);
 /*Aplique pelo menos três métodos de string em qualquer uma das variáveis criadas:
 toUpperCase(), toLowerCase(), length, replace(), includes(), etc.*/
 
-const 
+console.log(frase3.length);
+
+//Maiúsculo
+console.log(frase3.toUpperCase(5,8));
+
+//Minúsculo
+console.log(frase3.toLowerCase());
