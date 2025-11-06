@@ -72,4 +72,4 @@ try {
     header('Location: cadastro.php?error=1&message=' . urlencode($e->getMessage()));
     exit;
 }
-?>
+?>d

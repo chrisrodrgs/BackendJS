@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Triângulos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .triangle-container {
+            display: flex;
+            justify-content: center;
+            margin: 25px 0;
+        }
+        
+        .triangle {
+            width: 0;
+            height: 0;
+            border-left: 80px solid transparent;
+            border-right: 80px solid transparent;
+            border-bottom: 140px solid #4a90e2;
+            position: relative;
+        }
+        
+        .triangle-label {
+            position: absolute;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .triangle-label.left {
+            top: 60px;
+            left: -60px;
+        }
+        
+        .triangle-label.right {
+            top: 60px;
+            right: -60px;
+        }
+        
+        .triangle-label.base {
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+        
+        .input-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .input-group input {
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            border-color: #6a11cb;
+            outline: none;
+        }
+        
+        .input-group input.error {
+            border-color: #ff3860;
+        }
+        
+        .error-message {
+            color: #ff3860;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .button-container {
+            margin: 25px 0;
+        }
+        
+        .calculate-btn {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            font-size: 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(106, 17, 203, 0.3);
+            width: 100%;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(106, 17, 203, 0.4);
+        }
+        
+        .calculate-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .calculate-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .results {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+            border-left: 4px solid #6a11cb;
+            display: none;
+        }
+        
+        .results h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .result-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .result-label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .result-value {
+            color: #6a11cb;
+            font-weight: bold;
+        }
+        
+        .triangle-type {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .equilátero {
+            background-color: #4CAF50;
+        }
+        
+        .isósceles {
+            background-color: #2196F3;
+        }
+        
+        .escaleno {
+            background-color: #FF9800;
+        }
+        
+        .instructions {
+            background-color: #e8f4fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #2c5aa0;
+            border-left: 4px solid #4a90e2;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .triangle {
+                border-left: 60px solid transparent;
+                border-right: 60px solid transparent;
+                border-bottom: 105px solid #4a90e2;
+            }
+            
+            .triangle-label.left {
+                top: 45px;
+                left: -45px;
+            }
+            
+            .triangle-label.right {
+                top: 45px;
+                right: -45px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculadora de Triângulos</h1>
+        <p class="subtitle">Calcule o perímetro e a área de qualquer triângulo</p>
+        
+        <div class="triangle-container">
+            <div class="triangle">
+                <div class="triangle-label left">Lado A</div>
+                <div class="triangle-label right">Lado B</div>
+                <div class="triangle-label base">Base</div>
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <div class="input-group">
+                <label for="ladoEsquerdo">Lado Esquerdo (A):</label>
+                <input type="number" id="ladoEsquerdo" placeholder="Digite o valor do lado esquerdo" min="0.01" step="0.01">
+                <div class="error-message" id="erroLadoEsquerdo">O número deve ser positivo e maior que 0</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="ladoDireito">Lado Direito (B):</label>
+                <input type="number" id="ladoDireito" placeholder="Digite o valor do lado direito" min="0.01" step="0.01">
+                <div class="error-message" id="erroLadoDireito">O número deve ser positivo e maior que 0</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="base">Base:</label>
+                <input type="number" id="base" placeholder="Digite o valor da base" min="0.01" step="0.01">
+                <div class="error-message" id="erroBase">O número deve ser positivo e maior que 0</div>
+            </div>
+        </div>
+        
+        <div class="button-container">
+            <button class="calculate-btn" id="calculateBtn">Calcular Triângulo</button>
+        </div>
+        
+        <div class="instructions">
+            <p><strong>Instruções:</strong> Preencha os valores dos três lados do triângulo e clique em "Calcular Triângulo". O sistema validará se os valores formam um triângulo válido e calculará automaticamente o perímetro, área e tipo do triângulo.</p>
+        </div>
+        
+        <div class="results" id="resultados">
+            <!-- Os resultados serão inseridos aqui pelo JavaScript -->
+        </div>
+    </div>
+
+    <!-- Incluindo o arquivo JavaScript externo -->
+    <script src="exerc10.js"></script>
+</body>
+</html>
